@@ -52,7 +52,7 @@ Deployment: Render
 
 👉 Add screenshots here:
 
-![Chat UI](your-screenshot-link)
+![Chat UI](https://github.com/Nikki03-tech/Finwise-AI/blob/main/chat.png)
 ![Chart Output](https://github.com/Nikki03-tech/Finwise-AI/blob/main/chart.png)
 🌐 Live Demo
 
