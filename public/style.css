@@ -1,0 +1,20 @@
+body {
+  background: #0f172a;
+  color: white;
+  font-family: Arial;
+}
+
+.chat {
+  max-width: 600px;
+  margin: auto;
+  padding: 20px;
+}
+
+#messages div {
+  margin: 10px;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.user { background: #2563eb; }
+.ai { background: #1e293b; }
