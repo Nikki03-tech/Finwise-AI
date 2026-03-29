@@ -5,10 +5,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ✅ THIS LINE FIXES YOUR ERROR
+app.use(express.static("public"));
+
 app.post("/chat", async (req, res) => {
   const { message } = req.body;
 
-  // FAKE AI RESPONSE (works for demo)
   let reply = "";
 
   if (message.toLowerCase().includes("repo rate")) {
