@@ -14,6 +14,8 @@ async function sendMessage() {
 
   const data = await res.json();
 
+  messages.innerHTML += `<div class="ai">Typing...</div>`;
+  
   messages.innerHTML += `<div class="ai">${data.reply}</div>`;
 
   input.value = "";
