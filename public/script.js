@@ -6,7 +6,7 @@ async function sendMessage() {
 
   messages.innerHTML += `<div class="user">${userText}</div>`;
 
-  const res = await fetch("https://your-backend-url/chat", {
+  const res = await fetch("https://finwise-ai-0753.onrender.com/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message: userText }),
