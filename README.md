@@ -54,6 +54,8 @@ Deployment: Render
 
 ![Chat UI](https://github.com/Nikki03-tech/Finwise-AI/blob/main/chat.png)
 ![Chart Output](https://github.com/Nikki03-tech/Finwise-AI/blob/main/chart.png)
+
+
 🌐 Live Demo
 
 👉 https://finwise-ai-0753.onrender.com
