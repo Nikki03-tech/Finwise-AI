@@ -5,6 +5,7 @@ const ai = new GoogleGenAI({
   apiKey: env.geminiApiKey,
 });
 
+// Current model ID documented by Google's Gemini API model catalogue.
 const MODEL = "gemini-3.5-flash-lite";
 
 export async function getAIResponse(prompt) {
@@ -17,5 +18,10 @@ export async function getAIResponse(prompt) {
     contents: prompt,
   });
 
-  return response.text;
+  const text = response.text?.trim();
+  if (!text) {
+    throw new Error("The AI service returned an empty response. Please try again.");
+  }
+
+  return text;
 }
