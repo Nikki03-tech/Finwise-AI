@@ -1,90 +1,91 @@
-FinWise AI – Personal Financial Copilot
+# FinWise AI — Personal Financial Copilot
 
-Transforming financial confusion into confident decisions using GenAI
+A Generative AI finance assistant prototype that combines a chat interface with financial data visualisations. It was developed as a project for the ET Gen AI Hackathon.
 
-🧠 Overview
+> **Important:** This is an educational prototype, not a licensed financial adviser. Verify information independently and do not rely on generated output as personalised investment advice.
 
-FinWise AI is a GenAI-powered financial assistant that helps users make smarter investment decisions through a simple chat interface.
-It converts complex financial concepts into easy, actionable insights and visualizes investment growth using interactive charts.
+## Project Highlights
 
-🎯 Problem Statement
+- Chat interface for asking finance-related questions
+- Interactive investment-growth visualisation using Chart.js
+- Risk-aware response flow
+- Backend API built with Node.js and Express
+- AI integration using Google's GenAI SDK
+- Deployment link for trying the current hosted version
 
-Retail investors often struggle with:
+## Architecture (high level)
 
-Understanding financial concepts (repo rate, SIP, etc.)
-Making informed investment decisions
-Avoiding risky financial behavior
-Information overload from news and data
-💡 Solution
+```text
+Browser UI
+   ↓
+Express API
+   ↓
+AI response workflow
+   ↓
+Answer returned to the interface
+   ↓
+Chart.js visualisation where applicable
+```
 
-FinWise AI provides:
+The multi-agent design described during development includes news, investment, risk, and decision-making responsibilities. Availability of live data and individual capabilities depends on the current implementation and configured API access.
 
-🤖 Conversational AI for financial queries
-📊 Smart insights with visual charts
-⚠️ Risk detection and guidance
-🧠 Multi-agent architecture for better decision-making
-✨ Features
-💬 Chat-based financial assistant
-📈 Investment growth visualization (Chart.js)
-⚠️ Risk-aware responses
-🤖 Multi-agent system (News, Investment, Risk, Decision)
-🌐 Deployed on cloud (Render)
-🏗️ Architecture
-User
- ↓
-Frontend (HTML, CSS, JS)
- ↓
-Backend API (Node.js + Express)
- ↓
-Multi-Agent System
-   ├── 🧠 News Agent
-   ├── 📊 Investment Agent
-   ├── ⚠️ Risk Agent
-   └── 🤖 Decision Agent
- ↓
-Response + Chart Visualization
-🛠️ Tech Stack
-Frontend: HTML, CSS, JavaScript
-Backend: Node.js, Express.js
-Visualization: Chart.js
-Deployment: Render
-📸 Demo
+## Tech Stack
 
-👉 Add screenshots here:
+- **Frontend:** HTML, CSS, JavaScript
+- **Backend:** Node.js, Express.js
+- **AI SDK:** Google GenAI
+- **Charts:** Chart.js
+- **Configuration:** dotenv
 
-![Chat UI](https://github.com/Nikki03-tech/Finwise-AI/blob/main/chat.png)
-![Chart Output](https://github.com/Nikki03-tech/Finwise-AI/blob/main/chart.png)
+## Live Demo
 
+[Try FinWise AI](https://finwise-ai-0753.onrender.com)
 
-🌐 Live Demo
+The hosted service may take time to wake up or may be temporarily unavailable.
 
-👉 https://finwise-ai-0753.onrender.com
+## Run Locally
 
-⚙️ Installation (Local Setup)
-git clone https://github.com/Nikki03-tech/Finwise-AI.git
-cd Finwise-AI
-npm install
-node server.js
+Requirements: a recent Node.js version and an API key configured for the AI integration.
 
-Then open:
+1. Clone the repository and install dependencies:
+   ```bash
+   git clone https://github.com/Nikki03-tech/Finwise-AI.git
+   cd Finwise-AI
+   npm install
+   ```
+2. Copy `.env.example` to `.env` and add the required key(s). Never commit real API keys.
+3. Start the server:
+   ```bash
+   node server.js
+   ```
+4. Open the local URL configured by the server (the current project setup uses port 3000).
 
-http://localhost:3000
-🔐 Security & Scalability
-Designed for HTTPS secure communication
-Extensible to integrate real-time APIs
-Scalable multi-agent architecture
-🔮 Future Enhancements
-🔊 Voice-based interaction
-🌍 Regional language support
-📡 Real-time market data integration
-👤 User personalization
-🏆 Hackathon Submission
-🏁 Event: ET Gen AI Hackathon
-👤 Participant: Nikitha Singh Raj Purohit
-💡 Category: GenAI + Finance
-🙌 Acknowledgements
-Chart.js for data visualization
-Open-source community
-📌 Final Note
+## Screenshots
 
-FinWise AI is designed as a scalable system where simulated logic can be replaced with real-time financial APIs, making it production-ready.
+| Chat interface | Chart visualisation |
+| --- | --- |
+| ![FinWise AI chat interface](chat.png) | ![FinWise AI chart visualisation](chart.png) |
+
+## Development
+
+A test script is configured in `package.json`:
+
+```bash
+npm test
+```
+
+Run it locally to check the current test suite.
+
+## Future Improvements
+
+- Add clearer sources and timestamps for financial information
+- Expand automated tests for API and UI flows
+- Improve loading, error, and empty states
+- Strengthen validation and guardrails for financial queries
+
+## Author
+
+**Nikitha Singh Raj Purohit** · B.Tech CSE & IT, Class of 2027
+
+- [GitHub](https://github.com/Nikki03-tech)
+- [LinkedIn](https://www.linkedin.com/in/nikitha-singh-raj-purohit-862317301/)
