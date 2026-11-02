@@ -93,6 +93,12 @@ export function createMarketService({
         code,
       );
       error.status = status;
+      // Keep a short provider explanation for diagnostics without logging the
+      // request URL or exposing the configured API key.
+      const providerMessage = payload?.message || payload?.detail || payload?.error;
+      if (typeof providerMessage === "string" && providerMessage.trim()) {
+        error.providerMessage = providerMessage.trim().slice(0, 240);
+      }
       throw error;
     }
 

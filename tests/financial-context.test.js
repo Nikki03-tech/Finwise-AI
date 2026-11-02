@@ -49,6 +49,19 @@ test("asks for details instead of guessing an exchange or ticker", async () => {
   assert.equal(calls, 0);
 });
 
+test("cleans the UI label and output wording from an Indian stock-market news query", async () => {
+  let search;
+  const service = createFinancialContextService({
+    news: async (query) => {
+      search = query;
+      return { provider: "GNews", articles: [], totalArticles: 0 };
+    },
+  });
+
+  await service("Financial news Show me the latest available Indian stock market news with article sources and publication dates.");
+  assert.equal(search, "Indian stock market");
+});
+
 test("extracts the requested subject before asking for news", async () => {
   let search;
   const service = createFinancialContextService({
@@ -61,6 +74,20 @@ test("extracts the requested subject before asking for news", async () => {
   const result = await service("Show me the latest financial news about RBI.");
   assert.equal(search, "RBI");
   assert.equal(result.news.status, "available");
+});
+
+test("explains when Twelve Data denies access to an NSE quote", async () => {
+  const service = createFinancialContextService({
+    quote: async () => {
+      const error = new Error("provider rejected");
+      error.code = "MARKET_ACCESS_DENIED";
+      throw error;
+    },
+  });
+
+  const result = await service("Show me the latest TCS stock price on NSE.");
+  assert.equal(result.market.status, "unavailable");
+  assert.match(result.market.message, /plan includes NSE exchange coverage/i);
 });
 
 test("labels missing news provider as unavailable rather than inventing headlines", async () => {
