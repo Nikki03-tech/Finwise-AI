@@ -43,6 +43,52 @@ test("searches Indian English news with the GNews key in the backend request", a
   assert.equal(calls, 1);
 });
 
+test("falls back to Indian business market headlines when a broad stock-market search is empty", async () => {
+  let calls = 0;
+  const service = createNewsService({
+    env: { GNEWS_API_KEY: "test-news-key" },
+    now: () => 1_800_000_000_000,
+    fetchImpl: async (url) => {
+      calls += 1;
+      if (url.pathname === "/api/v4/search") {
+        assert.equal(url.searchParams.get("q"), "Indian stock market");
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ totalArticles: 0, articles: [] }),
+        };
+      }
+
+      assert.equal(url.pathname, "/api/v4/top-headlines");
+      assert.equal(url.searchParams.get("category"), "business");
+      assert.equal(url.searchParams.get("country"), "in");
+      assert.equal(url.searchParams.get("lang"), "en");
+      assert.match(url.searchParams.get("q"), /stock OR stocks/);
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          totalArticles: 1,
+          articles: [{
+            title: "Indian market closes higher",
+            description: "Market summary.",
+            url: "https://example.com/market",
+            publishedAt: "2026-11-02T10:00:00Z",
+            source: { name: "Example Financial News", url: "https://example.com" },
+          }],
+        }),
+      };
+    },
+  });
+
+  const result = await service.searchNews("Indian stock market");
+  assert.equal(calls, 2);
+  assert.equal(result.fallbackUsed, true);
+  assert.equal(result.articles.length, 1);
+  assert.equal(result.articles[0].source, "Example Financial News");
+  assert.match(result.fallbackNote, /top headlines/i);
+});
+
 test("does not contact GNews without an API key", async () => {
   let calls = 0;
   const service = createNewsService({
