@@ -539,8 +539,8 @@ async function handleAuthSubmit(event) {
         feedback.textContent = "Account created. Opening your workspace…";
         await initializeWorkspace(data.user);
       } else {
-        feedback.textContent = "Account created. Check your email to confirm your address, then sign in.";
         setAuthMode("signin");
+        feedback.textContent = "Account created. Check your email to confirm your address, then sign in.";
       }
     } else {
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
@@ -565,6 +565,7 @@ async function initializeWorkspace(user) {
 }
 
 async function initialize() {
+  setAuthMode("signin");
   $("auth-mode-toggle").addEventListener("click", () => {
     setAuthMode($("auth-form").dataset.mode === "signup" ? "signin" : "signup");
   });
