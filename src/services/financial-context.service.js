@@ -20,11 +20,11 @@ function extractQuoteRequest(question) {
 
 function extractNewsQuery(question) {
   const cleaned = question
-    .replace(/^\s*(?:please\s+)?(?:show|find|get|give me|what are|what is|tell me about)\s+/i, "")
+    .replace(/^\s*(?:please\s+)?(?:show\s+me|find\s+me|find|show|get|give\s+me|what\s+are|what\s+is|what's|tell\s+me\s+about|fetch)\s+/i, "")
     .replace(/^the\s+/i, "")
     .replace(/\b(?:latest|recent|today'?s|current|top)\b/gi, "")
     .replace(/\b(?:financial|business|stock|market)\s+(?=news|headlines|updates)/gi, "")
-    .replace(/\b(?:news|headlines|updates)\s*(?:about|on|for|regarding)?\s*/gi, " ")
+    .replace(/\b(?:news|headlines|updates)\s*(?:about|on|for|from|regarding)?\s*/gi, " ")
     .replace(/[?!.]+$/g, "")
     .replace(/\s+/g, " ")
     .trim();

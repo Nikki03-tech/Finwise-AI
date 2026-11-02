@@ -14,11 +14,17 @@ function sendProviderError(res, error) {
     : error?.code === "NEWS_ACCESS_DENIED" ? 403
     : 502;
 
-  const message = status === 400 || status === 404 || status === 429 || status === 403 || status === 503
-    ? error.message
-    : "The requested data provider is temporarily unavailable.";
+  const publicMessages = {
+    403: "The news provider denied access. Check the server-side API key and subscription.",
+    404: "The requested market or news data is not available for that symbol or query.",
+    429: "The provider rate limit was reached. Please try again later.",
+    502: "The data provider is temporarily unavailable. Please try again later.",
+    503: "This data provider is not configured on the server.",
+  };
 
-  return sendError(res, status, message);
+  return sendError(res, status, status === 400
+    ? error.message
+    : publicMessages[status] || publicMessages[502]);
 }
 
 export function createMarketController(services = {}) {

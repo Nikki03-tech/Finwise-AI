@@ -38,7 +38,7 @@ test("searches Indian English news with the GNews key in the backend request", a
 
   assert.equal(first.articles[0].source, "Example News");
   assert.equal(first.articles[0].publishedAt, "2026-11-02T09:00:00Z");
-  assert.match(first.freshnessNote, /12-hour delay/);
+  assert.match(first.freshnessNote, /up to 12 hours/);
   assert.equal(second.totalArticles, 1);
   assert.equal(calls, 1);
 });
