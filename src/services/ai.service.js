@@ -1,27 +1,49 @@
 import { GoogleGenAI } from "@google/genai";
-import { env } from "../config/env.js";
+import { getGeminiConfig } from "../config/env.js";
 
-const ai = new GoogleGenAI({
-  apiKey: env.geminiApiKey,
-});
+let client;
+let configuredKey;
 
-// Current model ID documented by Google's Gemini API model catalogue.
-const MODEL = "gemini-3.5-flash-lite";
+function getAIClient(apiKey) {
+  if (!client || configuredKey !== apiKey) {
+    client = new GoogleGenAI({ apiKey });
+    configuredKey = apiKey;
+  }
+
+  return client;
+}
 
 export async function getAIResponse(prompt) {
-  if (!prompt || !prompt.trim()) {
-    throw new Error("Prompt cannot be empty");
+  if (typeof prompt !== "string" || !prompt.trim()) {
+    throw new Error("Prompt cannot be empty.");
   }
 
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: prompt,
-  });
+  // Resolve configuration only when an AI request is made. This allows the
+  // web server and its health endpoint to start even before a key is added.
+  const { apiKey, model } = getGeminiConfig();
 
-  const text = response.text?.trim();
-  if (!text) {
-    throw new Error("The AI service returned an empty response. Please try again.");
+  try {
+    const response = await getAIClient(apiKey).models.generateContent({
+      model,
+      contents: prompt,
+    });
+
+    const text = response.text?.trim();
+    if (!text) {
+      const error = new Error("The AI provider returned an empty response.");
+      error.code = "AI_EMPTY_RESPONSE";
+      throw error;
+    }
+
+    return text;
+  } catch (cause) {
+    if (cause?.code === "AI_EMPTY_RESPONSE") {
+      throw cause;
+    }
+
+    const error = new Error("The AI provider request failed.");
+    error.code = "AI_PROVIDER_ERROR";
+    error.cause = cause;
+    throw error;
   }
-
-  return text;
 }

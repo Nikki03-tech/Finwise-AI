@@ -5,55 +5,41 @@ export async function runDecisionAgent({
   research,
   investment,
   risk,
+  sipInputs,
 }) {
   const prompt = `
-You are the Decision Agent for FinWise AI.
-
-Your job is to synthesize the outputs from multiple financial analysis agents into ONE clear, balanced response.
+You are the Decision Agent for FinWise AI, an educational financial assistant.
 
 USER QUESTION:
 ${userQuestion}
 
-RESEARCH AGENT:
+RESEARCH AGENT CONTEXT (AI-generated general information; not live market data):
 ${research}
 
-INVESTMENT AGENT:
-${JSON.stringify(investment, null, 2)}
+SIP INPUTS:
+${JSON.stringify(sipInputs, null, 2)}
 
-RISK AGENT:
-${risk}
+INVESTMENT ANALYSIS:
+${investment ? JSON.stringify(investment, null, 2) : "Not calculated because the user has not supplied a clear monthly SIP amount and duration."}
+
+RISK ANALYSIS:
+${risk ? JSON.stringify(risk, null, 2) : "No specific SIP risk calculation was run."}
 
 Instructions:
+1. Answer the user's actual question directly in simple, beginner-friendly language.
+2. Use only the calculation values supplied above; never invent or modify them.
+3. If SIP details are missing, explain which details are needed and ask the user to provide them. Do not insert default amounts or durations.
+4. If an annual return assumption is marked as assumed, clearly say that 12% is an illustrative assumption, not a prediction or guarantee.
+5. Include the main risks when discussing investments.
+6. Do not guarantee investment returns or present illustrative values as expected returns.
+7. Do not make personalized buy, sell, or investment recommendations.
+8. Do not claim to have accessed live prices, current news, or market data.
+9. Use Indian Rupee formatting wherever appropriate.
+10. Be concise and avoid repeating the same explanation.
 
-1. Answer the user's actual question directly.
-2. Summarize the relevant investment calculation.
-3. Include the most important risks.
-4. Mention important assumptions.
-5. Do not guarantee investment returns.
-6. Do not make a personalized investment recommendation.
-7. Do not tell the user to definitely invest or definitely avoid investing.
-8. Clearly distinguish illustrative calculations from actual expected returns.
-9. Use Indian Rupee formatting where appropriate.
-10. Keep the response concise and easy for a beginner to understand.
-
-Structure the response as:
-
-### 💡 Answer
-
-### 📊 Numbers
-
-### ⚠️ Risks
-
-### 🔍 What to Consider
-
-### Disclaimer
-
-The disclaimer should state that the information is educational and not personalized financial advice.
+Use helpful headings where they improve readability. End with a brief disclaimer that this is educational information, not personalized financial advice.
 `;
 
   const answer = await getAIResponse(prompt);
-
-  return {
-    answer,
-  };
+  return { answer };
 }

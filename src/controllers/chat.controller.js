@@ -2,73 +2,124 @@ import { runResearchAgent } from "../agents/research.agent.js";
 import { runInvestmentAgent } from "../agents/investment.agent.js";
 import { runRiskAgent } from "../agents/risk.agent.js";
 import { runDecisionAgent } from "../agents/decision.agent.js";
+import { extractSIPInputs } from "../services/input-extraction.service.js";
 
-function extractInvestmentInputs(question) {
-  const text = question.replace(/,/g, "").replace(/₹/g, " ");
-  const monthlyMatch =
-    text.match(/(?:₹?\s*)?(\d+(?:\.\d+)?)\s*(?:per\s+month|\/\s*month|monthly)\b/i) ||
-    text.match(/monthly\s+(?:investment\s+of\s+)?(?:₹?\s*)?(\d+(?:\.\d+)?)/i);
-  const yearsMatch = text.match(/(\d+(?:\.\d+)?)\s*years?\b/i);
-  const returnMatch =
-    text.match(/(\d+(?:\.\d+)?)\s*%\s*(?:annual|yearly|per\s+year)?/i) ||
-    text.match(/(?:annual|yearly)\s+return\s+(?:of\s+)?(\d+(?:\.\d+)?)/i);
+export function createChatController(agents = {}) {
+  const researchAgent = agents.runResearchAgent ?? runResearchAgent;
+  const investmentAgent = agents.runInvestmentAgent ?? runInvestmentAgent;
+  const riskAgent = agents.runRiskAgent ?? runRiskAgent;
+  const decisionAgent = agents.runDecisionAgent ?? runDecisionAgent;
 
-  return {
-    monthlyInvestment: monthlyMatch ? Number(monthlyMatch[1]) : 5000,
-    years: yearsMatch ? Number(yearsMatch[1]) : 5,
-    annualReturn: returnMatch ? Number(returnMatch[1]) : 12,
-  };
-}
-
-export async function chatController(req, res) {
-  try {
-    const { message } = req.body;
+  return async function chatController(req, res) {
+    const message = req.body?.message;
 
     if (typeof message !== "string" || !message.trim()) {
-      return res.status(400).json({ error: "Message is required" });
+      return res.status(400).json({
+        success: false,
+        error: "Please enter a financial question.",
+      });
     }
 
     const userQuestion = message.trim();
-    const { monthlyInvestment, years, annualReturn } =
-      extractInvestmentInputs(userQuestion);
+    if (userQuestion.length > 4000) {
+      return res.status(413).json({
+        success: false,
+        error: "Please keep your question under 4,000 characters.",
+      });
+    }
 
-    console.log("🔎 Research Agent...");
-    const research = await runResearchAgent({ topic: userQuestion });
+    try {
+      const sipInputs = extractSIPInputs(userQuestion);
+      let investment = null;
+      let risk = null;
 
-    console.log("📊 Investment Agent...");
-    const investment = await runInvestmentAgent({
-      monthlyInvestment,
-      years,
-      annualReturn,
-    });
+      if (sipInputs?.canCalculate) {
+        const [research, investmentResult, riskResult] = await Promise.all([
+          researchAgent({ topic: userQuestion }),
+          investmentAgent({
+            monthlyInvestment: sipInputs.monthlyInvestment,
+            years: sipInputs.years,
+            annualReturn: sipInputs.annualReturn,
+          }),
+          riskAgent({
+            monthlyInvestment: sipInputs.monthlyInvestment,
+            years: sipInputs.years,
+            annualReturn: sipInputs.annualReturn,
+            investmentType: "equity mutual fund",
+          }),
+        ]);
 
-    console.log("⚠️ Risk Agent...");
-    const risk = await runRiskAgent({
-      monthlyInvestment,
-      years,
-      annualReturn,
-      investmentType: "equity mutual fund",
-    });
+        investment = {
+          ...investmentResult,
+          annualReturnIsAssumed: sipInputs.annualReturnIsAssumed,
+        };
+        risk = riskResult;
 
-    console.log("🤖 Decision Agent...");
-    const decision = await runDecisionAgent({
-      userQuestion,
-      research,
-      investment,
-      risk,
-    });
+        const decision = await decisionAgent({
+          userQuestion,
+          research,
+          investment,
+          risk,
+          sipInputs,
+        });
 
-    return res.json({
-      success: true,
-      reply: decision.answer,
-      data: { research, investment, risk },
-    });
-  } catch (error) {
-    console.error("❌ Chat error:", error);
-    return res.status(500).json({
-      success: false,
-      error: "FinWise AI could not process your request.",
-      details: error.message,
-    });
-  }
+        return res.json({
+          success: true,
+          reply: decision.answer,
+          data: { research, investment, risk },
+        });
+      }
+
+      const research = await researchAgent({ topic: userQuestion });
+      const decision = await decisionAgent({
+        userQuestion,
+        research,
+        investment,
+        risk,
+        sipInputs,
+      });
+
+      return res.json({
+        success: true,
+        reply: decision.answer,
+        data: { research, investment, risk },
+      });
+    } catch (error) {
+      console.error("FinWise chat request failed:", {
+        code: error?.code || "INTERNAL_ERROR",
+        message: error?.message || "Unknown error",
+      });
+
+      if (error?.code === "INVALID_SIP_INPUT") {
+        return res.status(400).json({
+          success: false,
+          error: error.message,
+        });
+      }
+
+      if (error?.code === "AI_NOT_CONFIGURED") {
+        return res.status(503).json({
+          success: false,
+          error: "FinWise AI is not configured yet. Please try again later.",
+        });
+      }
+
+      if (
+        error?.code === "AI_PROVIDER_ERROR" ||
+        error?.code === "AI_EMPTY_RESPONSE"
+      ) {
+        return res.status(502).json({
+          success: false,
+          error: "FinWise AI could not get a response from its AI provider. Please try again.",
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        error: "FinWise AI could not process your request. Please try again.",
+      });
+    }
+  };
 }
+
+export const chatController = createChatController();
