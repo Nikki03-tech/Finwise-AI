@@ -1,15 +1,15 @@
 import { getMarketQuote } from "./market.service.js";
 import { searchFinancialNews } from "./news.service.js";
 
-const NEWS_INTENT = /\\b(news|headlines|latest updates|recent updates|market updates|financial updates)\\b/i;
-const QUOTE_INTENT = /\\b(stock price|share price|market price|latest price|price of|quote for|stock quote|share quote)\\b/i;
+const NEWS_INTENT = /\b(news|headlines|latest updates|recent updates|market updates|financial updates)\b/i;
+const QUOTE_INTENT = /\b(stock price|share price|market price|latest price|price of|quote for|stock quote|share quote)\b/i;
 
 function extractQuoteRequest(question) {
   const patterns = [
-    /\\b(?:stock\\s+)?(?:share\\s+)?price\\s+(?:of\\s+)?([A-Z0-9][A-Z0-9._-]{0,19})\\s+(?:on|at)\\s+(NSE|BSE)\\b/i,
-    /\\b(?:quote|stock quote|share quote)\\s+(?:for\\s+)?([A-Z0-9][A-Z0-9._-]{0,19})\\s+(?:on|at)\\s+(NSE|BSE)\\b/i,
-    /\\b([A-Z0-9][A-Z0-9._-]{0,19})\\s+(?:stock|share)\\s+(?:price|quote)\\s+(?:on|at)\\s+(NSE|BSE)\\b/i,
-    /\\b([A-Z0-9][A-Z0-9._-]{0,19})\\s+(NSE|BSE)\\s+(?:stock\\s+|share\\s+)?(?:price|quote)\\b/i,
+    /\b(?:stock\s+)?(?:share\s+)?price\s+(?:of\s+)?([A-Z0-9][A-Z0-9._-]{0,19})\s+(?:on|at)\s+(NSE|BSE)\b/i,
+    /\b(?:quote|stock quote|share quote)\s+(?:for\s+)?([A-Z0-9][A-Z0-9._-]{0,19})\s+(?:on|at)\s+(NSE|BSE)\b/i,
+    /\b([A-Z0-9][A-Z0-9._-]{0,19})\s+(?:stock|share)\s+(?:price|quote)\s+(?:on|at)\s+(NSE|BSE)\b/i,
+    /\b([A-Z0-9][A-Z0-9._-]{0,19})\s+(NSE|BSE)\s+(?:stock\s+|share\s+)?(?:price|quote)\b/i,
   ];
 
   for (const pattern of patterns) {
@@ -21,13 +21,13 @@ function extractQuoteRequest(question) {
 
 function extractNewsQuery(question) {
   const cleaned = question
-    .replace(/^\\s*(?:please\\s+)?(?:show\\s+me|find\\s+me|find|show|get|give\\s+me|what\\s+are|what\\s+is|what's|tell\\s+me\\s+about|fetch)\\s+/i, "")
-    .replace(/^the\\s+/i, "")
-    .replace(/\\b(?:latest|recent|today'?s|current|top)\\b/gi, "")
-    .replace(/\\b(?:financial|business|stock|market)\\s+(?=news|headlines|updates)/gi, "")
-    .replace(/\\b(?:news|headlines|updates)\\s*(?:about|on|for|from|regarding)?\\s*/gi, " ")
+    .replace(/^\s*(?:please\s+)?(?:show\s+me|find\s+me|find|show|get|give\s+me|what\s+are|what\s+is|what's|tell\s+me\s+about|fetch)\s+/i, "")
+    .replace(/^the\s+/i, "")
+    .replace(/\b(?:latest|recent|today'?s|current|top)\b/gi, "")
+    .replace(/\b(?:financial|business|stock|market)\s+(?=news|headlines|updates)/gi, "")
+    .replace(/\b(?:news|headlines|updates)\s*(?:about|on|for|from|regarding)?\s*/gi, " ")
     .replace(/[?!.]+$/g, "")
-    .replace(/\\s+/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 
   return cleaned.length >= 2 ? cleaned : question.trim();
