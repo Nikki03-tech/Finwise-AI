@@ -30,6 +30,8 @@ test("serves the existing browser UI and reports liveness/readiness", async (t) 
   assert.equal(healthData.status, "ok");
   assert.equal(healthData.service, "FinWise AI");
   assert.equal(typeof healthData.aiConfigured, "boolean");
+  assert.equal(typeof healthData.marketDataConfigured, "boolean");
+  assert.equal(typeof healthData.newsConfigured, "boolean");
 
   const ready = await fetch(`${baseUrl}/health/ready`);
   const readyData = await ready.json();

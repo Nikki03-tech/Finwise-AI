@@ -54,6 +54,7 @@ test("answers a general finance question without inventing SIP calculations", as
     runResearchAgent: async () => "General finance context.",
     runInvestmentAgent: async () => { investmentCalls += 1; return {}; },
     runRiskAgent: async () => { riskCalls += 1; return {}; },
+    getFinancialContext: async () => ({}),
     runDecisionAgent: async ({ investment, risk }) => {
       assert.equal(investment, null);
       assert.equal(risk, null);
@@ -94,6 +95,7 @@ test("runs investment and risk calculations for a complete SIP question", async 
       captured.risk = input;
       return { analysis: "Market values can fall." };
     },
+    getFinancialContext: async () => ({}),
     runDecisionAgent: async ({ sipInputs }) => {
       captured.assumed = sipInputs.annualReturnIsAssumed;
       return { answer: "Here is your illustrative SIP scenario." };
@@ -122,6 +124,7 @@ test("returns a helpful response path when SIP details are missing", async (t) =
     runResearchAgent: async () => "SIP educational context.",
     runInvestmentAgent: async () => { calculationCalls += 1; return {}; },
     runRiskAgent: async () => { calculationCalls += 1; return {}; },
+    getFinancialContext: async () => ({}),
     runDecisionAgent: async ({ sipInputs, investment, risk }) => {
       assert.deepEqual(sipInputs.missingFields, ["monthly investment amount", "investment duration"]);
       assert.equal(investment, null);
@@ -140,12 +143,45 @@ test("returns a helpful response path when SIP details are missing", async (t) =
   assert.equal(calculationCalls, 0);
 });
 
+test("passes provider-sourced news context to the decision agent", async (t) => {
+  let capturedContext;
+  const controller = createChatController({
+    runResearchAgent: async () => "General business context.",
+    getFinancialContext: async () => ({
+      news: {
+        status: "available",
+        provider: "GNews",
+        articles: [{
+          title: "A test headline",
+          source: "Example Publisher",
+          publishedAt: "2026-11-02T09:00:00Z",
+          url: "https://example.com/story",
+        }],
+      },
+    }),
+    runDecisionAgent: async ({ financialContext }) => {
+      capturedContext = financialContext;
+      return { answer: "Here is the latest verified context." };
+    },
+  });
+  const server = await startTestServer(controller);
+  t.after(() => server.close());
+
+  const response = await postMessage(server.url, "Show latest news about RBI.");
+  const data = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(capturedContext.news.articles[0].url, "https://example.com/story");
+  assert.equal(data.data.financialContext.news.provider, "GNews");
+});
+
 test("rejects unsupported SIP assumptions before calling AI agents", async (t) => {
   let agentCalls = 0;
   const controller = createChatController({
     runResearchAgent: async () => { agentCalls += 1; return "research"; },
     runInvestmentAgent: async () => { agentCalls += 1; return {}; },
     runRiskAgent: async () => { agentCalls += 1; return {}; },
+    getFinancialContext: async () => { agentCalls += 1; return {}; },
     runDecisionAgent: async () => { agentCalls += 1; return { answer: "answer" }; },
   });
   const server = await startTestServer(controller);

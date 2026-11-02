@@ -3,6 +3,7 @@ import { runInvestmentAgent } from "../agents/investment.agent.js";
 import { runRiskAgent } from "../agents/risk.agent.js";
 import { runDecisionAgent } from "../agents/decision.agent.js";
 import { extractSIPInputs } from "../services/input-extraction.service.js";
+import { getFinancialContext } from "../services/financial-context.service.js";
 import { calculateSIP } from "../utils/calculations.js";
 
 export function createChatController(agents = {}) {
@@ -10,6 +11,7 @@ export function createChatController(agents = {}) {
   const investmentAgent = agents.runInvestmentAgent ?? runInvestmentAgent;
   const riskAgent = agents.runRiskAgent ?? runRiskAgent;
   const decisionAgent = agents.runDecisionAgent ?? runDecisionAgent;
+  const financialContextService = agents.getFinancialContext ?? getFinancialContext;
 
   return async function chatController(req, res) {
     const message = req.body?.message;
@@ -42,20 +44,22 @@ export function createChatController(agents = {}) {
           annualReturn: sipInputs.annualReturn,
         });
 
-        const [research, investmentResult, riskResult] = await Promise.all([
-          researchAgent({ topic: userQuestion }),
-          investmentAgent({
-            monthlyInvestment: sipInputs.monthlyInvestment,
-            years: sipInputs.years,
-            annualReturn: sipInputs.annualReturn,
-          }),
-          riskAgent({
-            monthlyInvestment: sipInputs.monthlyInvestment,
-            years: sipInputs.years,
-            annualReturn: sipInputs.annualReturn,
-            investmentType: "equity mutual fund",
-          }),
-        ]);
+        const [research, investmentResult, riskResult, financialContext] =
+          await Promise.all([
+            researchAgent({ topic: userQuestion }),
+            investmentAgent({
+              monthlyInvestment: sipInputs.monthlyInvestment,
+              years: sipInputs.years,
+              annualReturn: sipInputs.annualReturn,
+            }),
+            riskAgent({
+              monthlyInvestment: sipInputs.monthlyInvestment,
+              years: sipInputs.years,
+              annualReturn: sipInputs.annualReturn,
+              investmentType: "equity mutual fund",
+            }),
+            financialContextService(userQuestion),
+          ]);
 
         investment = {
           ...investmentResult,
@@ -69,28 +73,33 @@ export function createChatController(agents = {}) {
           investment,
           risk,
           sipInputs,
+          financialContext,
         });
 
         return res.json({
           success: true,
           reply: decision.answer,
-          data: { research, investment, risk },
+          data: { research, investment, risk, financialContext },
         });
       }
 
-      const research = await researchAgent({ topic: userQuestion });
+      const [research, financialContext] = await Promise.all([
+        researchAgent({ topic: userQuestion }),
+        financialContextService(userQuestion),
+      ]);
       const decision = await decisionAgent({
         userQuestion,
         research,
         investment,
         risk,
         sipInputs,
+        financialContext,
       });
 
       return res.json({
         success: true,
         reply: decision.answer,
-        data: { research, investment, risk },
+        data: { research, investment, risk, financialContext },
       });
     } catch (error) {
       console.error("FinWise chat request failed:", {

@@ -3,85 +3,90 @@
 ## 1. Repository layout
 ```text
 Finwise-AI/
-├── public/                 # Existing browser UI (kept unchanged)
+├── public/                         # Existing browser UI; unchanged
 ├── src/
-│   ├── agents/             # Decision, investment, research, risk
+│   ├── agents/                     # decision, investment, research, risk
 │   ├── config/env.js
-│   ├── controllers/chat.controller.js
-│   ├── routes/chat.routes.js
-│   ├── services/            # Gemini, input extraction, investment
-│   ├── utils/calculations.js
+│   ├── controllers/                # chat, investment, market
+│   ├── middleware/rate-limit.js
+│   ├── routes/                     # chat, investment, market
+│   ├── services/                   # Gemini, financial context, market, news, SIP
+│   ├── utils/                      # calculation and response helpers
 │   └── app.js
 ├── tests/
-├── server.js
-└── package.json
+└── server.js
 ```
 
-## 2. HTTP contract
-### GET /health
-Returns HTTP 200 with process status and whether a Gemini key is configured. It is a liveness check, not proof that the AI provider is reachable.
+## 2. HTTP contracts
+### Chat — `POST /chat`
+Request: `{ "message": "Calculate SIP ₹5,000 per month for 5 years at 10%." }`.
 
-### GET /health/ready
-Returns HTTP 200 if the Gemini key is configured, otherwise HTTP 503.
+Success: `{ success, reply, data }`; `data` contains `research`, `investment`, `risk`, and `financialContext`. `investment`/`risk` are null when no complete SIP scenario exists. The frontend-critical `reply` and `data.investment.calculation` fields remain compatible.
 
-### POST /chat
-Request body: { "message": "Calculate SIP ₹5,000 per month for 5 years at 10%." }
+### SIP calculator — `POST /investment/sip`
+Request example: `{ "monthlyInvestment": 5000, "years": 5, "annualReturn": 10 }`.
 
-Successful response fields:
-- success: boolean
-- reply: final educational explanation
-- data.research: research-agent text
-- data.investment: investment result, or null if no complete SIP scenario is present
-- data.risk: risk-agent result, or null if no complete SIP scenario is present
+Returns `data.calculation`, `data.annualReturnIsAssumed`, and an educational disclaimer. If `annualReturn` is omitted, 12% is used as a clearly flagged mathematical illustration. Monthly contribution and duration must be supplied.
 
-Error response: { "success": false, "error": "Client-safe explanation" }
+### Symbol search — `GET /market/search?q=Tata%20Consultancy`
+Returns symbol, company/instrument name, exchange, MIC, country, currency, instrument type, and plan access metadata when returned by the provider.
 
-Status codes: 400 for invalid/empty chat or calculation inputs; 413 for oversized input; 502 for Gemini provider errors or empty provider response; 503 when the Gemini key is not configured; 500 for unexpected server errors.
+### Quote — `GET /market/quote?symbol=TCS&exchange=NSE`
+Requires a ticker and NSE/BSE exchange. Returns provider, symbol, company name if supplied, exchange, currency, price, OHLC fields, percent change, volume, market timestamp, exchange time zone, market-open flag, retrieval timestamp, and freshness note.
 
-## 3. SIP input extraction
-extractSIPInputs(question) returns null when the question is not recognized as an SIP request.
+### Historical series — `GET /market/history?symbol=TCS&exchange=NSE&interval=1day&outputsize=30`
+Allowed intervals: `1day`, `1week`, `1month`. `outputsize` is 5–100. Returns timestamped OHLCV values and retrieval metadata.
 
-For SIP-related questions it returns monthlyInvestment (or null), years (month durations are converted), annualReturn (explicit rate or illustrative 12%), annualReturnIsAssumed, canCalculate, and missingFields.
+### News — `GET /market/news?q=Reserve%20Bank%20of%20India&max=5`
+Returns article title/description, publisher name/site, URL, publication timestamp, query, provider, retrieval timestamp, and freshness note. Requested result count is bounded to 1–10.
 
-It never supplies a default monthly amount or duration.
+Errors use `{ success: false, error }`. Invalid input returns 400, missing keys 503, provider rate limit 429, unavailable symbol/history 404 where identifiable, and upstream errors 502. Provider stack traces and credentials are not sent to the client.
 
-## 4. SIP calculation
-calculateSIP({ monthlyInvestment, years, annualReturn }) validates inputs and calculates a future value for regular monthly contributions.
-- Months = rounded duration in years multiplied by 12.
-- Monthly rate = annual rate divided by 12 and 100.
-- The formula models contributions at the **beginning** of each month.
-- Total invested = monthly contribution multiplied by number of months.
-- Estimated gain = estimated future value minus total invested.
+## 3. Financial Context Service
+`getFinancialContext(question)` detects explicit financial-news intent and quote intent. A quote is fetched automatically only when both a ticker and NSE/BSE are clear in the question. If exchange/symbol details are missing, it returns `needs_details`; it does not guess the ticker.
 
-Guardrails: monthly contribution must be greater than zero and no more than ₹1,000,000,000; duration must be greater than zero and no more than 80 years; annual return assumption must be 0–100%; at least one month must be represented.
+News is queried through GNews only when the prompt asks for news, headlines, or updates. General educational prompts do not spend news/market API quota.
 
-These limits protect the calculation and chart from invalid or excessively large inputs; they are not financial suitability limits.
+The service returns per-source status: `available`, `unavailable`, or `needs_details`. The Decision Agent must not use model memory to fill unavailable provider data.
 
-## 5. Agent responsibilities
-- **Research:** produces general educational context; does not retrieve current news or market prices.
-- **Investment:** runs deterministic SIP calculation and asks Gemini to explain it.
-- **Risk:** describes general scenario risks and uncertainty.
-- **Decision:** answers the actual question and combines available context. It must not invent missing figures or guarantee returns.
+## 4. Provider adapters
+### Twelve Data
+- REST base: `https://api.twelvedata.com`.
+- Authentication: `Authorization: apikey ...` request header.
+- Endpoints used: `/symbol_search`, `/quote`, `/time_series`.
+- Request timeout: 10 seconds.
+- Cache TTLs: quote 60 seconds; symbol search 10 minutes; history 5 minutes.
+- Coverage and quote freshness depend on the selected symbol, exchange, and account entitlement.
 
-For non-SIP questions, the controller calls Research and Decision only. For an SIP question with missing details, it returns the missing context to the Decision Agent without creating an investment or risk calculation. For a complete SIP scenario, Investment and Risk are also called.
+### GNews
+- REST base: `https://gnews.io/api/v4`.
+- Search endpoint: `/search` with `q`, `lang=en`, `country=in`, `max`, `sortby=publishedAt`, and server-side `apikey` query parameter.
+- Request timeout: 10 seconds; cache TTL: 15 minutes.
+- Result count capped at 10 for a Free-plan-compatible maximum.
+- GNews Free plan currently advertises a 12-hour delay; publication time and retrieval time are distinct.
 
-## 6. Gemini configuration and errors
-Environment variables:
-- GEMINI_API_KEY — required only for AI requests.
-- GEMINI_MODEL — optional; defaults to gemini-3.5-flash-lite.
-- PORT — optional; defaults to 3000.
-- FRONTEND_ORIGIN — optional; only needed if a separate browser origin is introduced.
+## 5. SIP calculation
+`calculateSIP({ monthlyInvestment, years, annualReturn })` uses monthly compounding and contribution at the beginning of each month. It validates positive monthly contribution, maximum ₹1,000,000,000 monthly amount, duration over 0 and at most 80 years, annual assumption 0–100%, and at least one whole month.
 
-The Gemini client is created lazily when the first AI request arrives. This prevents missing credentials from crashing the HTTP process during startup.
+The annual assumption defaults to 12% only when the user omits a rate; the response flags this as assumed. The monthly amount and duration are never defaulted.
 
-Error codes: AI_NOT_CONFIGURED, AI_EMPTY_RESPONSE, AI_PROVIDER_ERROR, INVALID_SIP_INPUT. Provider details and stack traces are not returned to the browser.
+## 6. AI orchestration
+- Non-SIP educational question: Research + Decision.
+- Incomplete SIP question: Research + Decision; Decision asks for missing amount/duration.
+- Complete SIP question: Research + Investment + Risk, then Decision.
+- Explicit market/news question: fetch provider context in parallel and pass provider result/status to Decision.
 
-## 7. Frontend compatibility
-The existing public/index.html, public/script.js, and public/style.css remain unchanged. The browser continues to send POST /chat with a message property, reads reply, and reads data.investment.calculation before rendering the chart.
+Decision prompt rules prohibit invented current quotes, news, timestamps, publishers, article URLs, guaranteed returns, or personalized buy/sell recommendations. External article text is treated as untrusted reference material.
 
-The controller retains these response fields. For questions without an SIP calculation, data.investment is null, which the existing browser code already handles through optional chaining.
+## 7. Configuration and operations
+Environment variables: `GEMINI_API_KEY`, `GEMINI_MODEL`, `TWELVE_DATA_API_KEY`, `GNEWS_API_KEY`, `PORT`, `FRONTEND_ORIGIN`.
 
-## 8. Testing strategy
-Run npm test. Tests cover SIP formula and zero-return behavior, contribution timing and fractional duration, invalid calculation ranges, input extraction and assumed-return labeling, chat validation and HTTP response behavior using stubbed agents, and no fabricated SIP calculation for general questions.
+Missing Gemini key does not prevent liveness startup; chat returns 503. Missing optional provider keys mark only that feature unavailable; they do not take down chat or the server.
 
-No test requires a real Gemini API key or incurs a live model request.
+Per-IP limits: chat 12 per 5 minutes; investment and market/news 30 per 5 minutes. Caches and rate limiter are in-process memory and must be replaced by a shared store when running multiple instances.
+
+## 8. Frontend compatibility
+The existing `public/index.html`, `public/script.js`, and `public/style.css` are unchanged. Browser calls remain same-origin `POST /chat`, reads `reply`, and renders Chart.js when `data.investment.calculation` is present. Additional `financialContext` data is additive.
+
+## 9. Testing strategy
+`npm test` runs deterministic tests with injected agents and fake provider responses. It covers SIP calculations, input extraction, chat orchestration, standalone SIP API, provider authentication/normalization, caching, missing-key behavior, quote/news intent, rate limiting, and app health/static serving. Tests do not require live API credentials or consume provider quotas.
