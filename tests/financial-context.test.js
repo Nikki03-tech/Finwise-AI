@@ -19,6 +19,24 @@ test("fetches a quote only when ticker and NSE/BSE are explicitly stated", async
   assert.equal(result.market.price, 100);
 });
 
+test("recognizes ticker-first quote wording used in the live TCS test", async () => {
+  let request;
+  const service = createFinancialContextService({
+    quote: async (input) => {
+      request = input;
+      return { provider: "Twelve Data", symbol: "TCS", exchange: "NSE", currency: "INR", price: 3456.7 };
+    },
+  });
+
+  const result = await service(
+    "Show me the latest available TCS stock price on NSE, including its current price, currency, data source, and timestamp."
+  );
+
+  assert.deepEqual(request, { symbol: "TCS", exchange: "NSE" });
+  assert.equal(result.market.status, "available");
+  assert.equal(result.market.currency, "INR");
+});
+
 test("asks for details instead of guessing an exchange or ticker", async () => {
   let calls = 0;
   const service = createFinancialContextService({

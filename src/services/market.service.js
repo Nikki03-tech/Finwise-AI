@@ -9,6 +9,12 @@ function providerError(message, code = "MARKET_PROVIDER_ERROR") {
   return error;
 }
 
+function nullableNumber(value) {
+  if (value === undefined || value === null || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
 function configuredKey(env) {
   const key = env.TWELVE_DATA_API_KEY?.trim();
   if (!key || key === "replace_with_your_twelve_data_api_key") {
@@ -72,12 +78,19 @@ export function createMarketService({
     }
 
     if (!response.ok || payload?.status === "error" || payload?.code) {
-      const status = response.status || 502;
+      // Twelve Data can report provider errors in a JSON payload even when the
+      // HTTP response itself is 200. Prefer its numeric error code when present.
+      const providerStatus = Number(payload?.code);
+      const status = providerStatus || response.status || 502;
+      const code = status === 429 ? "MARKET_RATE_LIMIT"
+        : status === 401 || status === 403 ? "MARKET_ACCESS_DENIED"
+        : status === 404 ? "MARKET_QUOTE_UNAVAILABLE"
+        : "MARKET_PROVIDER_ERROR";
       const error = providerError(
         status === 429
           ? "Market data provider rate limit reached."
           : "Market data provider rejected the request.",
-        status === 429 ? "MARKET_RATE_LIMIT" : "MARKET_PROVIDER_ERROR",
+        code,
       );
       error.status = status;
       throw error;
@@ -156,13 +169,13 @@ export function createMarketService({
       micCode: payload.mic_code || null,
       currency: payload.currency || null,
       price,
-      open: Number.isFinite(Number(payload.open)) ? Number(payload.open) : null,
-      high: Number.isFinite(Number(payload.high)) ? Number(payload.high) : null,
-      low: Number.isFinite(Number(payload.low)) ? Number(payload.low) : null,
-      previousClose: Number.isFinite(Number(payload.previous_close)) ? Number(payload.previous_close) : null,
-      change: Number.isFinite(Number(payload.change)) ? Number(payload.change) : null,
-      percentChange: Number.isFinite(Number(payload.percent_change)) ? Number(payload.percent_change) : null,
-      volume: Number.isFinite(Number(payload.volume)) ? Number(payload.volume) : null,
+      open: nullableNumber(payload.open),
+      high: nullableNumber(payload.high),
+      low: nullableNumber(payload.low),
+      previousClose: nullableNumber(payload.previous_close),
+      change: nullableNumber(payload.change),
+      percentChange: nullableNumber(payload.percent_change),
+      volume: nullableNumber(payload.volume),
       marketTimestamp: payload.datetime || payload.timestamp || null,
       exchangeTimezone: payload.exchange_timezone || null,
       isMarketOpen: typeof payload.is_market_open === "boolean" ? payload.is_market_open : null,
@@ -204,21 +217,25 @@ export function createMarketService({
       format: "JSON",
     });
 
-    if (!Array.isArray(payload.values)) {
+    if (!Array.isArray(payload.values) || payload.values.length === 0) {
       throw providerError("Historical data is not currently available for that symbol.", "MARKET_HISTORY_UNAVAILABLE");
     }
 
     const values = payload.values.map((item) => ({
       datetime: item.datetime,
-      open: Number(item.open),
-      high: Number(item.high),
-      low: Number(item.low),
-      close: Number(item.close),
-      volume: item.volume === undefined ? null : Number(item.volume),
+      open: nullableNumber(item.open),
+      high: nullableNumber(item.high),
+      low: nullableNumber(item.low),
+      close: nullableNumber(item.close),
+      volume: nullableNumber(item.volume),
     })).filter((item) =>
       item.datetime &&
       [item.open, item.high, item.low, item.close].every(Number.isFinite)
     );
+
+    if (values.length === 0) {
+      throw providerError("Historical data did not contain usable price points.", "MARKET_HISTORY_UNAVAILABLE");
+    }
 
     const result = {
       provider: "Twelve Data",

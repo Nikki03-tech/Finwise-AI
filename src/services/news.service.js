@@ -33,6 +33,7 @@ export function createNewsService({
     const cacheKey = `${cleanQuery.toLowerCase()}:${count}`;
     const cached = cache.get(cacheKey);
     if (cached && cached.expiresAt > now()) return cached.value;
+    if (cached) cache.delete(cacheKey);
 
     const url = new URL("/api/v4/search", BASE_URL);
     url.searchParams.set("q", cleanQuery);
@@ -80,15 +81,26 @@ export function createNewsService({
 
     const articles = (Array.isArray(payload.articles) ? payload.articles : [])
       .slice(0, count)
-      .map((article) => ({
-        title: article.title || "",
-        description: (article.description || "").slice(0, 600),
-        url: article.url || null,
-        image: article.image || null,
-        publishedAt: article.publishedAt || null,
-        source: article.source?.name || null,
-        sourceUrl: article.source?.url || null,
-      }))
+      .map((article) => {
+        const safeHttpUrl = (value) => {
+          if (typeof value !== "string") return null;
+          try {
+            const parsed = new URL(value);
+            return ["http:", "https:"].includes(parsed.protocol) ? parsed.href : null;
+          } catch {
+            return null;
+          }
+        };
+        return {
+          title: typeof article.title === "string" ? article.title.slice(0, 300) : "",
+          description: typeof article.description === "string" ? article.description.slice(0, 600) : "",
+          url: safeHttpUrl(article.url),
+          image: safeHttpUrl(article.image),
+          publishedAt: article.publishedAt || null,
+          source: article.source?.name || null,
+          sourceUrl: safeHttpUrl(article.source?.url),
+        };
+      })
       .filter((article) => article.title && article.url);
 
     const result = {
@@ -101,6 +113,12 @@ export function createNewsService({
       freshnessNote: "The GNews Free plan can delay articles by up to 12 hours. Check each article's publication time. Plan and licensing terms apply.",
     };
 
+    if (cache.size > 500) {
+      for (const [key, item] of cache) {
+        if (item.expiresAt <= now()) cache.delete(key);
+      }
+      while (cache.size >= 500) cache.delete(cache.keys().next().value);
+    }
     cache.set(cacheKey, { value: result, expiresAt: now() + NEWS_TTL_MS });
     return result;
   }

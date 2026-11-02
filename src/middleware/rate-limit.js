@@ -28,8 +28,13 @@ export function createRateLimiter({
     }
 
     if (buckets.size > 5_000) {
+      // Remove expired entries first, then evict the oldest entries so a
+      // stream of unique client addresses cannot grow this map indefinitely.
       for (const [address, item] of buckets) {
         if (item.resetAt <= currentTime) buckets.delete(address);
+      }
+      while (buckets.size > 5_000) {
+        buckets.delete(buckets.keys().next().value);
       }
     }
 

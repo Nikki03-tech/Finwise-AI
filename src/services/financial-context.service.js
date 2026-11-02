@@ -8,6 +8,7 @@ function extractQuoteRequest(question) {
   const patterns = [
     /\b(?:stock\s+)?(?:share\s+)?price\s+(?:of\s+)?([A-Z0-9][A-Z0-9._-]{0,19})\s+(?:on|at)\s+(NSE|BSE)\b/i,
     /\b(?:quote|stock quote|share quote)\s+(?:for\s+)?([A-Z0-9][A-Z0-9._-]{0,19})\s+(?:on|at)\s+(NSE|BSE)\b/i,
+    /\b([A-Z0-9][A-Z0-9._-]{0,19})\s+(?:stock|share)\s+(?:price|quote)\s+(?:on|at)\s+(NSE|BSE)\b/i,
     /\b([A-Z0-9][A-Z0-9._-]{0,19})\s+(NSE|BSE)\s+(?:stock\s+|share\s+)?(?:price|quote)\b/i,
   ];
 
