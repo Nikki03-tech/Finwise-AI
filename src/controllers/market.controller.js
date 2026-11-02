@@ -11,11 +11,11 @@ function sendProviderError(res, error) {
     : error?.code?.endsWith("_NOT_CONFIGURED") ? 503
     : error?.code?.endsWith("_UNAVAILABLE") ? 404
     : error?.code?.endsWith("_RATE_LIMIT") ? 429
-    : error?.code === "NEWS_ACCESS_DENIED" ? 403
+    : error?.code?.endsWith("_ACCESS_DENIED") ? 403
     : 502;
 
   const publicMessages = {
-    403: "The news provider denied access. Check the server-side API key and subscription.",
+    403: "The data provider denied access. Check the server-side API key and subscription.",
     404: "The requested market or news data is not available for that symbol or query.",
     429: "The provider rate limit was reached. Please try again later.",
     502: "The data provider is temporarily unavailable. Please try again later.",
