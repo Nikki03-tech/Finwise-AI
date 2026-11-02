@@ -25,6 +25,19 @@ app.use("/chat", createRateLimiter({ limit: 12, windowMs: 5 * 60_000 }));
 app.use("/investment", createRateLimiter({ limit: 30, windowMs: 5 * 60_000 }));
 app.use("/market", createRateLimiter({ limit: 30, windowMs: 5 * 60_000 }));
 
+// Only the Supabase project URL and publishable/anon key are sent to the browser.
+ // These values are designed to be public; Row Level Security protects user data.
+app.get("/config", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({
+    supabaseUrl: process.env.SUPABASE_URL?.trim() || null,
+    supabaseAnonKey:
+      process.env.SUPABASE_ANON_KEY?.trim() ||
+      process.env.SUPABASE_PUBLISHABLE_KEY?.trim() ||
+      null,
+  });
+});
+
 app.get("/health", (_req, res) => {
   const marketKey = process.env.TWELVE_DATA_API_KEY?.trim();
   const newsKey = process.env.GNEWS_API_KEY?.trim();
