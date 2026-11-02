@@ -109,7 +109,7 @@ export function createNewsService({
     if (cached && cached.expiresAt > now()) return cached.value;
     if (cached) cache.delete(cacheKey);
 
-    let payload = await request("/search", {
+    let payload = await request("/api/v4/search", {
       q: cleanQuery,
       lang: "en",
       country: "in",
@@ -128,7 +128,7 @@ export function createNewsService({
       /\b(stock|stocks|market|markets|share|shares|equity|equities)\b/i.test(cleanQuery);
 
     if (articles.length === 0 && isBroadIndiaMarketQuery) {
-      payload = await request("/top-headlines", {
+      payload = await request("/api/v4/top-headlines", {
         category: "business",
         lang: "en",
         country: "in",
