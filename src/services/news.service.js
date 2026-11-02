@@ -124,8 +124,8 @@ export function createNewsService({
     // top-headlines endpoint with India and market terms rather than inventing
     // stories or returning an empty result without trying the headlines feed.
     const isBroadIndiaMarketQuery =
-      /\\b(india|indian)\\b/i.test(cleanQuery) &&
-      /\\b(stock|stocks|market|markets|share|shares|equity|equities)\\b/i.test(cleanQuery);
+      /\b(india|indian)\b/i.test(cleanQuery) &&
+      /\b(stock|stocks|market|markets|share|shares|equity|equities)\b/i.test(cleanQuery);
 
     if (articles.length === 0 && isBroadIndiaMarketQuery) {
       payload = await request("/top-headlines", {
