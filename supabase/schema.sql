@@ -11,8 +11,10 @@ create table if not exists public.conversations (
   updated_at timestamptz not null default now(),
   constraint conversations_title_length check (char_length(title) between 1 and 120),
   constraint conversations_messages_array check (
-    jsonb_typeof(messages) = 'array'
-    and jsonb_array_length(messages) <= 500
+    case
+      when jsonb_typeof(messages) = 'array' then jsonb_array_length(messages) <= 500
+      else false
+    end
   )
 );
 
