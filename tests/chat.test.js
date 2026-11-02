@@ -94,7 +94,7 @@ test("runs investment and risk calculations for a complete SIP question", async 
       captured.risk = input;
       return { analysis: "Market values can fall." };
     },
-    runDecisionAgent: async ({ investment, sipInputs }) => {
+    runDecisionAgent: async ({ sipInputs }) => {
       captured.assumed = sipInputs.annualReturnIsAssumed;
       return { answer: "Here is your illustrative SIP scenario." };
     },
@@ -138,6 +138,29 @@ test("returns a helpful response path when SIP details are missing", async (t) =
   assert.equal(response.status, 200);
   assert.equal(data.reply, "Please share the monthly amount and duration.");
   assert.equal(calculationCalls, 0);
+});
+
+test("rejects unsupported SIP assumptions before calling AI agents", async (t) => {
+  let agentCalls = 0;
+  const controller = createChatController({
+    runResearchAgent: async () => { agentCalls += 1; return "research"; },
+    runInvestmentAgent: async () => { agentCalls += 1; return {}; },
+    runRiskAgent: async () => { agentCalls += 1; return {}; },
+    runDecisionAgent: async () => { agentCalls += 1; return { answer: "answer" }; },
+  });
+  const server = await startTestServer(controller);
+  t.after(() => server.close());
+
+  const response = await postMessage(
+    server.url,
+    "Calculate SIP ₹5,000 per month for 5 years at 150%.",
+  );
+  const data = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(data.success, false);
+  assert.match(data.error, /Annual return must be 0 or greater/);
+  assert.equal(agentCalls, 0);
 });
 
 test("rejects excessively long messages", async (t) => {

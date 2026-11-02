@@ -3,6 +3,7 @@ import { runInvestmentAgent } from "../agents/investment.agent.js";
 import { runRiskAgent } from "../agents/risk.agent.js";
 import { runDecisionAgent } from "../agents/decision.agent.js";
 import { extractSIPInputs } from "../services/input-extraction.service.js";
+import { calculateSIP } from "../utils/calculations.js";
 
 export function createChatController(agents = {}) {
   const researchAgent = agents.runResearchAgent ?? runResearchAgent;
@@ -34,6 +35,13 @@ export function createChatController(agents = {}) {
       let risk = null;
 
       if (sipInputs?.canCalculate) {
+        // Validate the scenario before making any external AI requests.
+        calculateSIP({
+          monthlyInvestment: sipInputs.monthlyInvestment,
+          years: sipInputs.years,
+          annualReturn: sipInputs.annualReturn,
+        });
+
         const [research, investmentResult, riskResult] = await Promise.all([
           researchAgent({ topic: userQuestion }),
           investmentAgent({

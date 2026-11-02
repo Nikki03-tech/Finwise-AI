@@ -22,7 +22,7 @@ export function calculateSIP({
   }
 
   if (!Number.isFinite(annualReturn) || annualReturn < 0 || annualReturn > 100) {
-    const error = new Error("Annual return assumption must be between 0% and 100%.");
+    const error = new Error("Annual return must be 0 or greater and no more than 100%.");
     error.code = "INVALID_SIP_INPUT";
     throw error;
   }
