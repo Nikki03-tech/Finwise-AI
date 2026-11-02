@@ -11,6 +11,9 @@ FinWise AI is an educational finance assistant built with Node.js, Express, Goog
 - Optional Indian financial-news search through GNews, with article publication timestamps, publishers, and source links
 - Chat enrichment for explicit news requests and unambiguous ticker + NSE/BSE quote requests
 - In-memory response caching and per-IP throttling to reduce upstream quota abuse
+- Email/password accounts through Supabase Auth
+- Private per-user conversation history stored in Supabase Postgres with Row Level Security
+- Readable Markdown responses, SIP charts, and image-rich financial-news article cards
 - Health/readiness endpoints, architecture documentation, and automated CI
 
 ## What is live data and what is not
@@ -24,7 +27,10 @@ FinWise AI is an educational finance assistant built with Node.js, Express, Goog
 See [High-Level Design](docs/HLD.md) and [Low-Level Design](docs/LLD.md).
 
 ```text
-Existing Browser UI (public/) ──▶ Express API
+Browser workspace (public/) ──▶ Supabase Auth + Postgres (user-scoped RLS)
+             │
+             └─────────────────▶ Express API
+                                  ├─ /config: public Supabase URL + anon key
                                   ├─ /chat: input extraction + AI agents
                                   ├─ /investment/sip: deterministic SIP math
                                   └─ /market: Twelve Data + GNews adapters
@@ -34,7 +40,7 @@ Existing Browser UI (public/) ──▶ Express API
                                          │
                                          ▼
                                   Decision Agent / JSON API
-Existing UI receives the same reply + SIP chart fields; the frontend is unchanged.
+The browser saves each conversation to the signed-in user's Supabase row under RLS. Provider secrets remain on Render.
 ```
 
 ## Tech stack
@@ -43,7 +49,8 @@ Existing UI receives the same reply + SIP chart fields; the frontend is unchange
 - **AI:** Google GenAI SDK / Gemini
 - **Market data:** Twelve Data REST API
 - **News search:** GNews REST API
-- **Frontend:** existing HTML, CSS, and browser JavaScript (unchanged)
+- **Frontend:** responsive HTML, CSS, and browser JavaScript workspace
+- **Authentication/history:** Supabase Auth + Postgres with Row Level Security
 - **Charts:** Chart.js
 - **Tests:** Node.js built-in test runner
 
@@ -68,7 +75,18 @@ GNEWS_API_KEY=your_gnews_api_key
 ```
 Get a key from [GNews](https://gnews.io/). Its Free plan is delayed and limited; verify current subscription and licensing conditions before public or commercial deployment.
 
-Other optional settings: `PORT=3000`, `FRONTEND_ORIGIN=`. The current browser UI and API share one origin, so `FRONTEND_ORIGIN` can remain blank.
+### Supabase accounts and chat history
+
+1. Create a Supabase project and open **Project Settings → API** (or the Connect/API keys page).
+2. Copy the project URL into Render as `SUPABASE_URL`.
+3. Copy the publishable key (or legacy anon key) into Render as `SUPABASE_ANON_KEY`. Never use the `service_role` key in the browser or in this variable.
+4. In the Supabase SQL Editor, run the complete script in [supabase/schema.sql](supabase/schema.sql). It creates the conversations table, enables Row Level Security, and grants each user access only to their own rows.
+5. In Supabase Authentication → URL Configuration, set the Site URL to your Render domain: `https://finwise-ai-0753.onrender.com`. Add that same origin to the allowed redirect URLs.
+6. Keep email confirmation enabled for public sign-up unless you have a reason to change the project policy. Users may need to confirm their email before their first sign-in.
+
+The browser receives only the Supabase URL and publishable/anon key from `GET /config`. These are public client credentials, not secrets; the database relies on RLS policies using `auth.uid()` for isolation. Do not add a Supabase service-role key to Render for this feature.
+
+Other optional settings: `PORT=3000`, `FRONTEND_ORIGIN=`. The browser UI and API share one origin, so `FRONTEND_ORIGIN` can remain blank.
 
 ## Run locally
 1. Install Node.js 20 or later.
@@ -115,7 +133,9 @@ Returns deterministic calculation fields, an `annualReturnIsAssumed` flag, and a
 Provider errors are converted to client-safe JSON. Typical statuses: 400 invalid input, 404 data unavailable for the requested symbol, 413 request too large, 429 local/provider rate limit, 502 upstream provider error, 503 missing provider configuration.
 
 ## Security and operations
-- API keys stay on the server and are not included in successful API responses.
+- Gemini, Twelve Data, and GNews API keys stay on the server and are not included in successful API responses.
+- Supabase browser credentials are the publishable/anon key only. No service-role key is sent to the browser.
+- Conversation history is stored in Supabase with RLS policies that scope SELECT/INSERT/UPDATE/DELETE to `auth.uid() = user_id`.
 - API request body is capped at 32 KB; chat text at 4,000 characters.
 - Chat is throttled to 12 requests per 5 minutes per IP; investment and market/news routes are throttled to 30 per 5 minutes per IP.
 - Provider responses are cached in memory (short quote/history/search/news windows).
@@ -128,6 +148,8 @@ For the existing Node web service:
 - Start command: `npm start`
 - Health check: `/health`
 - Set `GEMINI_API_KEY` for chat. Set `TWELVE_DATA_API_KEY` and `GNEWS_API_KEY` only after creating provider accounts and confirming plan coverage.
+- Set `SUPABASE_URL` and `SUPABASE_ANON_KEY` for sign-up, sign-in, and persistent chat history.
+- Run `supabase/schema.sql` once in the Supabase SQL Editor before using history.
 
 Keep the existing Render service/domain. A GitHub commit and green CI do not prove that Render has deployed; verify the deployment in Render and call `/health` after deployment completes.
 
