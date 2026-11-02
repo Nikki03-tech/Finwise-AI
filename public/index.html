@@ -2,55 +2,175 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>FinWise AI</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- CSS -->
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="description" content="FinWise AI — your personal financial learning copilot.">
+  <title>FinWise AI — Your Financial Workspace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-
-  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-
 <body>
+  <div id="auth-screen" class="auth-screen">
+    <div class="auth-showcase">
+      <a class="brand brand-large" href="/" aria-label="FinWise AI home">
+        <span class="brand-mark">F</span>
+        <span>FinWise <strong>AI</strong></span>
+      </a>
+      <div class="showcase-copy">
+        <span class="eyebrow">YOUR PERSONAL FINANCE SPACE</span>
+        <h1>Make sense of money.<br><span>Move forward with clarity.</span></h1>
+        <p>Learn financial concepts, explore investment scenarios, and keep your conversations together in one calm, focused workspace.</p>
+      </div>
+      <div class="showcase-visual" aria-hidden="true">
+        <div class="visual-orbit orbit-one"></div>
+        <div class="visual-orbit orbit-two"></div>
+        <div class="visual-chart">
+          <div class="visual-chart-top"><span>Illustrative growth</span><span class="visual-chart-dot"></span></div>
+          <svg viewBox="0 0 440 160" role="img" aria-label="Decorative rising chart">
+            <path d="M12 130 C65 125 82 111 120 116 S180 93 218 96 S275 66 308 72 S370 34 428 15" fill="none" stroke="#7566E8" stroke-width="5" stroke-linecap="round"/>
+            <path d="M12 130 C65 125 82 111 120 116 S180 93 218 96 S275 66 308 72 S370 34 428 15 L428 150 L12 150Z" fill="url(#chartFill)" opacity=".45"/>
+            <defs><linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9B91FF"/><stop offset="1" stop-color="#9B91FF" stop-opacity="0"/></linearGradient></defs>
+          </svg>
+          <div class="visual-chart-foot"><span>Plan with context</span><span>Grow with confidence</span></div>
+        </div>
+        <div class="floating-note note-one"><span class="note-icon">✦</span><span><b>Clear answers</b><small>Finance made understandable</small></span></div>
+        <div class="floating-note note-two"><span class="note-icon note-green">↗</span><span><b>Your history</b><small>Your chats, all in one place</small></span></div>
+      </div>
+      <div class="auth-showcase-foot">Educational finance support · Not investment advice</div>
+    </div>
 
-<div class="chat">
-
-  <!-- 🔷 Header -->
-  <div class="header">
-    <h2>🤖 FinWise AI</h2>
-    <p class="subtitle">Your Personal Financial Copilot</p>
+    <div class="auth-panel">
+      <div class="auth-card">
+        <div class="auth-mobile-brand brand">
+          <span class="brand-mark">F</span><span>FinWise <strong>AI</strong></span>
+        </div>
+        <span class="eyebrow" id="auth-eyebrow">WELCOME BACK</span>
+        <h2 id="auth-title">Sign in to FinWise</h2>
+        <p class="auth-subtitle" id="auth-subtitle">Pick up where you left off.</p>
+        <form id="auth-form" class="auth-form">
+          <label id="name-field" class="field" hidden>
+            <span>Your name</span>
+            <input id="auth-name" type="text" autocomplete="name" placeholder="Enter your name">
+          </label>
+          <label class="field">
+            <span>Email address</span>
+            <input id="auth-email" type="email" autocomplete="email" placeholder="you@example.com" required>
+          </label>
+          <label class="field">
+            <span>Password</span>
+            <input id="auth-password" type="password" autocomplete="current-password" placeholder="At least 8 characters" minlength="8" required>
+          </label>
+          <button id="auth-submit" class="button button-primary button-wide" type="submit">Sign in</button>
+        </form>
+        <p id="auth-feedback" class="form-feedback" role="status" aria-live="polite"></p>
+        <div class="auth-switch">
+          <span id="auth-switch-label">New to FinWise?</span>
+          <button id="auth-mode-toggle" class="text-button" type="button">Create an account</button>
+        </div>
+        <div id="supabase-setup-note" class="setup-note" hidden>
+          <b>One-time setup needed</b>
+          <span>Connect your Supabase project in Render and run the database setup SQL from the GitHub repository to enable secure accounts and chat history.</span>
+        </div>
+        <p class="auth-legal">By continuing, you agree to use FinWise AI as an educational tool. It does not provide personalised financial advice.</p>
+      </div>
+    </div>
   </div>
 
-  <!-- 💬 Chat Messages -->
-  <div id="messages"></div>
+  <div id="app-shell" class="app-shell" hidden>
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="FinWise AI home">
+        <span class="brand-mark">F</span><span>FinWise <strong>AI</strong></span>
+      </a>
+      <button id="new-chat" class="button button-new-chat" type="button"><span>＋</span> New chat</button>
+      <div class="history-heading">
+        <span>YOUR HISTORY</span>
+        <span class="history-count" id="history-count">0</span>
+      </div>
+      <div id="history-list" class="history-list">
+        <div class="history-empty">Your conversations will appear here.</div>
+      </div>
+      <div class="sidebar-bottom">
+        <div class="sidebar-profile">
+          <div id="user-avatar" class="user-avatar">F</div>
+          <div class="profile-copy"><b id="profile-name">FinWise member</b><span id="profile-email">Signed in</span></div>
+          <button id="sign-out" class="icon-button" type="button" title="Sign out" aria-label="Sign out">↗</button>
+        </div>
+        <div class="sidebar-foot">Private workspace · Your chats stay yours</div>
+      </div>
+    </aside>
 
-  <!-- 🤖 Multi-Agent Section -->
-  <div class="agents">
-    <h3>🤖 AI Agents Working</h3>
-    <ul>
-      <li>🧠 News Agent – analyzes financial trends</li>
-      <li>📊 Investment Agent – tracks growth & returns</li>
-      <li>⚠️ Risk Agent – detects risky decisions</li>
-      <li>🤖 Decision Agent – gives final advice</li>
-    </ul>
+    <main class="main-panel">
+      <header class="topbar">
+        <div>
+          <span class="eyebrow">PERSONAL FINANCE COPILOT</span>
+          <h1 id="conversation-title">A clearer view of your money</h1>
+        </div>
+        <div class="topbar-right"><span class="status-dot"></span><span>AI workspace</span></div>
+      </header>
+
+      <section id="welcome-screen" class="welcome-screen">
+        <div class="welcome-badge"><span>✦</span> A little more clarity starts here</div>
+        <h2>What would you like to<br><span>understand today?</span></h2>
+        <p>Ask a question, explore a scenario, or get context on the markets. Start wherever you are.</p>
+        <div class="prompt-grid">
+          <button class="prompt-card" type="button" data-prompt="Explain compound interest in simple terms with a small example.">
+            <span class="prompt-icon icon-lilac">✧</span><span><b>Learn a concept</b><small>Explain compound interest simply</small></span><span class="prompt-arrow">↗</span>
+          </button>
+          <button class="prompt-card" type="button" data-prompt="Calculate a SIP investment of ₹5,000 per month for 10 years at an assumed annual return of 12%. Show the total invested and estimated maturity value.">
+            <span class="prompt-icon icon-mint">▥</span><span><b>Explore a SIP</b><small>See a sample investment projection</small></span><span class="prompt-arrow">↗</span>
+          </button>
+          <button class="prompt-card" type="button" data-prompt="Show me the latest available Indian stock market news with article sources and publication dates.">
+            <span class="prompt-icon icon-peach">◷</span><span><b>Market headlines</b><small>Explore verified financial news</small></span><span class="prompt-arrow">↗</span>
+          </button>
+          <button class="prompt-card" type="button" data-prompt="Explain the main risks a beginner should understand before investing in equity mutual funds.">
+            <span class="prompt-icon icon-blue">◇</span><span><b>Understand risk</b><small>Learn what to consider before investing</small></span><span class="prompt-arrow">↗</span>
+          </button>
+        </div>
+      </section>
+
+      <section id="messages" class="messages" aria-live="polite" hidden></section>
+
+      <div id="agent-status" class="agent-status" hidden>
+        <span class="agent-pulse"></span>
+        <span>Research</span><i></i><span>Investment</span><i></i><span>Risk</span><i></i><span>Decision</span>
+        <span class="agent-status-copy">agents are reviewing your question</span>
+      </div>
+
+      <div class="composer-wrap">
+        <form id="chat-form" class="composer">
+          <textarea id="input" rows="1" maxlength="4000" placeholder="Ask FinWise anything about money, markets or investing…" aria-label="Your message"></textarea>
+          <button id="send-button" class="send-button" type="submit" aria-label="Send message"><span>Send</span><b>↑</b></button>
+        </form>
+        <div class="composer-foot"><span><kbd>Enter</kbd> to send · <kbd>Shift + Enter</kbd> for a new line</span><span>FinWise can make mistakes. Verify important information.</span></div>
+      </div>
+    </main>
+
+    <aside class="right-rail">
+      <div class="rail-card rail-intro">
+        <div class="rail-spark">✦</div>
+        <span class="eyebrow">YOUR FINANCIAL SPACE</span>
+        <h3>Small steps.<br>Clearer decisions.</h3>
+        <p>Use FinWise to learn, compare assumptions and understand financial information at your own pace.</p>
+      </div>
+      <div class="rail-card">
+        <div class="rail-card-heading"><span class="rail-icon">◈</span><b>How FinWise works</b></div>
+        <div class="agent-list">
+          <div><span class="agent-number">01</span><span><b>Research</b><small>Explains the topic</small></span></div>
+          <div><span class="agent-number">02</span><span><b>Investment</b><small>Works through calculations</small></span></div>
+          <div><span class="agent-number">03</span><span><b>Risk</b><small>Highlights things to consider</small></span></div>
+          <div><span class="agent-number">04</span><span><b>Decision</b><small>Brings the answer together</small></span></div>
+        </div>
+      </div>
+      <div class="rail-note"><span>ⓘ</span><p>Market data and news depend on provider coverage, subscription limits and publication delays.</p></div>
+    </aside>
   </div>
 
-  <!-- 📊 Chart Section -->
-  <div class="chart-container">
-    <canvas id="chart"></canvas>
-  </div>
-
-  <!-- 🧾 Input Section -->
-  <div class="input-area">
-    <input id="input" placeholder="Ask about SIP, stocks, crypto..." />
-    <button onclick="sendMessage()">Send</button>
-  </div>
-
-</div>
-
-<!-- JS -->
-<script src="script.js"></script>
-
+  <script src="script.js"></script>
 </body>
 </html>

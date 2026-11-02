@@ -63,3 +63,38 @@ test("chat returns a clear 503 without a Gemini API key", async (t) => {
   assert.equal(data.success, false);
   assert.match(data.error, /not configured/i);
 });
+
+
+test("serves only public Supabase client configuration", async (t) => {
+  const previous = {
+    url: process.env.SUPABASE_URL,
+    anon: process.env.SUPABASE_ANON_KEY,
+    service: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+  process.env.SUPABASE_URL = "https://demo-project.supabase.co";
+  process.env.SUPABASE_ANON_KEY = "public-anon-test-key";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "must-never-be-returned";
+  const { server, baseUrl } = await startServer();
+
+  t.after(async () => {
+    if (previous.url === undefined) delete process.env.SUPABASE_URL;
+    else process.env.SUPABASE_URL = previous.url;
+    if (previous.anon === undefined) delete process.env.SUPABASE_ANON_KEY;
+    else process.env.SUPABASE_ANON_KEY = previous.anon;
+    if (previous.service === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    else process.env.SUPABASE_SERVICE_ROLE_KEY = previous.service;
+    await new Promise((resolve, reject) =>
+      server.close((error) => error ? reject(error) : resolve())
+    );
+  });
+
+  const response = await fetch(`${baseUrl}/config`);
+  const config = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.deepEqual(config, {
+    supabaseUrl: "https://demo-project.supabase.co",
+    supabaseAnonKey: "public-anon-test-key",
+  });
+  assert.equal(JSON.stringify(config).includes("must-never-be-returned"), false);
+});
