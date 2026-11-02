@@ -28,5 +28,9 @@ jobs:
         run: npm ci
       - name: Audit production dependencies
         run: npm audit --omit=dev
+      - name: Check browser JavaScript syntax
+        run: node --check public/script.js
+      - name: Check server JavaScript syntax
+        run: node --check src/app.js
       - name: Run backend tests
         run: npm test
