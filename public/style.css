@@ -217,3 +217,15 @@ kbd { padding: 2px 4px; border: 1px solid #e3e4ec; border-radius: 4px; color: #8
   .composer-foot { font-size: 7px; }
   .composer-foot span:last-child { max-width: 48%; text-align: right; }
 }
+
+
+/* Conversation list controls and notices */
+.history-item-wrap { display: flex; align-items: center; gap: 2px; }
+.history-item-wrap .history-item { flex: 1; min-width: 0; }
+.history-delete { width: 24px; height: 25px; }
+.news-card-open { color: #6b61ca; font-size: 9px; font-weight: 700; }
+.inline-notice { width: fit-content; max-width: 100%; margin: 0 auto 10px; padding: 9px 12px; border: 1px solid #f2e3bd; border-radius: 9px; color: #96743a; background: #fff9ea; font-size: 10px; line-height: 1.5; }
+.typing-bubble { color: #9899ad; font-style: italic; }
+@media (max-width: 700px) {
+  .history-item-wrap { display: none; }
+}
